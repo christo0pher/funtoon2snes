@@ -18,7 +18,7 @@
     "web-vitals": "^1.1.2"
   },
   "scripts": {
-    "start": "react-app-rewired start",
+    "start": "react-app-rewired --openssl-legacy-provider start",
     "build": "react-app-rewired build",
     "build:inc": "react-app-rewired build && node update-version.js",
     "bi": "react-app-rewired build && node update-version.js",

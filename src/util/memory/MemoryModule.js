@@ -1,4 +1,6 @@
+
 import { Blacklist } from "../utils";
+
 
 const getDefaultSettingsObject = (def) => {
     if (!def) return {};
@@ -16,6 +18,7 @@ export default class MemoryModule {
         this.events = {};
         this.__setReloadUnsafe = null;
         this.__shouldRunForGame = false;
+
     }
 
     get settings() {
