@@ -14,6 +14,11 @@ export default class DeathEventModule extends MemoryModule {
     }
 
     settingDefs = {
+        enableStreamerBot: {
+            display: "Enable StreamerBotAction",
+            type: "bool",
+            default: false,
+        },
         sbUrl: {
             display: "URL of streamerbot socket",
             type: "text",
@@ -27,7 +32,7 @@ export default class DeathEventModule extends MemoryModule {
     };
 
     shouldRunForGame(gameTags) {
-        return true;// gameTags.SM;
+        return gameTags.SM;
     }
 
     getMemoryReads() {
@@ -38,7 +43,7 @@ export default class DeathEventModule extends MemoryModule {
         if (!isDeath(memory.gameState.prevReadValue) && isDeath(memory.gameState.value)) {
             sendEvent("samusDeath");
             globalState.isDeath = true;
-            if (this.settings.sbAction.value !== '') {
+            if (this.settings.enableStreamerBot && this.settings.sbAction.value !== '') {
                 this.sbSocket.doAction(this.settings.sbAction.value);
             }
         } else {

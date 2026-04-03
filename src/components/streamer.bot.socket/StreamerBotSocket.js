@@ -1,13 +1,13 @@
 
 
 export default class StreamerBotWebsocket {
-    constructor() {
-        this.socket = new WebSocket('ws://127.0.0.1:8123');
+    constructor(streamerBotSocketUrl) {
+        this.socket = new WebSocket(streamerBotSocketUrl);
         this.socket.onopen = () => {
             console.log('websocket connected');
         }
-        this.socket.onerror = () => {
-            console.log(`WebSocket error: ${error}`)
+        this.socket.onerror = (error) => {
+            console.log(`WebSocket error: ${JSON.stringify(error)}`)
         }
     }
 
