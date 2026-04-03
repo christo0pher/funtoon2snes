@@ -382,6 +382,12 @@ export const SamusMovementType = {
     SHINESPARK_CF_DRAINED:                  0x1B,
 }
 
+export const SamusPoseXDirection = {
+    FORWARD: 0,
+    LEFT: 4,
+    RIGHT: 8,
+}
+
 export const SamusPose = {
     FACING_FORWARD_POWER_SUIT:              0x00,
     FACING_RIGHT_NORMAL:                    0x01,
@@ -436,7 +442,7 @@ export const EquipmentFlags = {
     XRAY: 0x8000,
 }
 
-export const CollectedBeamFlags = {
+export const BeamFlags = {
     WAVE:   0x0001,
     ICE:    0x0002,
     SPAZER: 0x0004,
@@ -476,6 +482,13 @@ export const Areas = {
     DEBUG:          0x07,
 }
 
+export const ElevatorStatus = {
+    INACTIVE: 0,
+    LEAVING_ROOM: 1,
+    ROOM_TRANSITION: 2,
+    ENTERING_ROOM: 3,
+}
+
 export const EventStates = {
     ZEBES_IS_AWAKE:            0x00,
     METROID_ATE_SIDEHOPPER:    0x01,
@@ -513,6 +526,24 @@ export const BossStates = {
     GOLDEN_TORIZO:  0x12,
     RIDLEY:         0x10,
     MOTHER_BRAIN:   0x29,
+}
+
+export const MotherBrainForms = {
+    FIRST_PHASE: 0,
+    FAKE_DEATH: 1,
+    SECOND_PHASE: 2,
+    DRAINED_CORPSE: 3,
+    THIRD_PHASE: 4,
+}
+
+export const TimerStates = {
+    INACTIVE: 0,
+    CERES_START: 1,
+    MOTHER_BRAIN_START: 2,
+    INITIAL_DELAY: 3,
+    TIMER_RUNNING_MOVEMENT_DELAYED: 4,
+    TIMER_RUNNING_MOVING_INTO_PLACE: 5,
+    TIMER_RUNNING_MOVED_INTO_PLACE: 6,
 }
 
 export const ItemFlags = {

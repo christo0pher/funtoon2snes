@@ -1,6 +1,7 @@
 import MemoryModule from "../util/memory/MemoryModule";
 import headerAddresses from "./headerAddresses";
 import smz3Addresses from "./smz3/addresses";
+import arcadeAddresses from "./supermetroidarcade/addresses";
 
 export default class GameDetectorModule extends MemoryModule {
     constructor() {
@@ -19,8 +20,9 @@ export default class GameDetectorModule extends MemoryModule {
         return [
             headerAddresses.hiHeaderMapMode,
             headerAddresses.loHeaderMapMode,
-
             // smz3Addresses.smz3CurrentGame,
+            arcadeAddresses.arcadeSaveBehavior,
+
 
             ...(this.isLoRAM
                 ? [headerAddresses.loHeaderGameTitle, headerAddresses.loHeaderChecksum, headerAddresses.loHeaderRAMSize]
@@ -38,6 +40,14 @@ export default class GameDetectorModule extends MemoryModule {
         // Check for HiROM or LoROM bits
         const loROMValid = (memory.loHeaderMapMode.value & 0b11101000) === 0b00100000;
         const hiROMValid = (memory.hiHeaderMapMode.value & 0b11101000) === 0b00100000;
+
+        // console.log(
+        //     'loROMValid:', loROMValid,
+        //     '   hiROMValid:', hiROMValid,
+        //     '   loHeaderMapMode:', (memory.loHeaderMapMode.value & 0b111).toString(2),
+        //     '   hiHeaderMapMode:', (memory.hiHeaderMapMode.value & 0b111).toString(2),
+        // )
+
         if (
             loROMValid &&
             ((memory.loHeaderMapMode.value & 0b111) === 0b000 || (memory.loHeaderMapMode.value & 0b111) === 0b011)
@@ -80,6 +90,10 @@ export default class GameDetectorModule extends MemoryModule {
             this.checkChange(checksum) ||
             this.checkChange(ramSize)
         ) {
+            console.log('GAME DETECTION CONDITIONS',  !this.headerRead,
+                (checksum.prevReadValue === undefined && checksum.value !== undefined),
+                `${checksum.prevReadValue} -> ${checksum.value}`,
+                this.checkChange(ramSize))
             this.headerRead = true;
             // Flag game as changed if header changes
             globalState.gameTagsChanged = true;
@@ -93,7 +107,12 @@ export default class GameDetectorModule extends MemoryModule {
                 case "SUPER METROID":
                     gameTags["SM"] = true;
                     if (ramSize.value >= 0x05) {
-                        gameTags["PRACTICE"] = true;
+                        console.log(arcadeAddresses.arcadeSaveBehavior.value)
+                        if (arcadeAddresses.arcadeSaveBehavior.value === 0xEA) {
+                            gameTags["ARCADE"] = true;
+                        } else {
+                            gameTags["PRACTICE"] = true;
+                        }
                     } else {
                         gameTags["VANILLA"] = true;
                     }

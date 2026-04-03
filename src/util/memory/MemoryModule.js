@@ -1,6 +1,4 @@
-
-import { Blacklist } from "../utils";
-
+import { Blacklist, readIntFlag } from "../utils";
 
 const getDefaultSettingsObject = (def) => {
     if (!def) return {};
@@ -18,7 +16,6 @@ export default class MemoryModule {
         this.events = {};
         this.__setReloadUnsafe = null;
         this.__shouldRunForGame = false;
-
     }
 
     get settings() {
@@ -74,6 +71,20 @@ export default class MemoryModule {
         return (
             (read.prevReadValue !== undefined && read.value != read.prevReadValue) ||
             (read.value !== undefined && read.prevReadValue === undefined)
+        );
+    }
+
+    /**
+     * A helper function to detect whether a single bit of a read has changed at all.
+     * @param {DataRead} read The DataRead to test.
+     * @param {int} bit The bit index to test.
+     * @returns {boolean} True if the bit value changed from the previous read.
+     */
+    checkBitChange(read, bit) {
+        return (
+            (read.value !== undefined && read.prevReadValue === undefined) ||
+            (read.prevReadValue !== undefined &&
+                readIntFlag(read.value || 0, bit) !== readIntFlag(read.prevReadValue || 0, bit))
         );
     }
 

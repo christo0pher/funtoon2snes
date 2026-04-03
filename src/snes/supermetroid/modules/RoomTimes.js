@@ -1,9 +1,9 @@
 import MemoryModule from "../../../util/memory/MemoryModule";
-import { EquipmentFlags, GameStates, Rooms } from "../enums";
+import { BeamFlags, ElevatorStatus, EquipmentFlags, GameStates, Rooms } from "../enums";
 import Addresses from "../addresses";
 import { BossStates } from "../enums";
 import { noneOf, readBigIntFlag } from "../../../util/utils";
-import { isDemo, isIGTPaused } from "../utils/gameStateUtils";
+import { isDemo, isGameplay, isIGTPaused } from "../utils/gameStateUtils";
 import { counterDelta } from "../utils/counterDelta";
 
 const FPS = 60.098813897441;
@@ -28,6 +28,7 @@ export default class RoomTimes extends MemoryModule {
 
     getMemoryReads(globalState) {
         return [
+            Addresses.gameState,
             Addresses.roomID,
             Addresses.bossStates,
             Addresses.gameTimeFrames,
@@ -42,6 +43,8 @@ export default class RoomTimes extends MemoryModule {
             Addresses.collectedItemBits,
             Addresses.collectedEquipment,
             Addresses.equippedEquipment,
+            Addresses.collectedBeams,
+            Addresses.equippedBeams,
             Addresses.samusMissiles,
             Addresses.samusMaxMissiles,
             Addresses.samusSupers,
@@ -56,6 +59,13 @@ export default class RoomTimes extends MemoryModule {
             Addresses.enemy1HP, // Mother Brain HP
             Addresses.mb2BabyIndex,
             Addresses.enemy0AIVariable1,
+            Addresses.doorTransitionFunction,
+            Addresses.samusXSpeedDivisor,
+            Addresses.elevatorStatus,
+            Addresses.speedBoostTimer,
+            Addresses.samusXExtraRunSpeed,
+            Addresses.samusXExtraRunSubSpeed,
+            Addresses.specialSamusPaletteTimer,
         ];
     }
 
@@ -87,8 +97,33 @@ export default class RoomTimes extends MemoryModule {
             this.state.frameCountRollover++;
         }
 
+
+
         if (currentIGT < prevIGT) {
             // Savestate loaded
+            if (
+                this.state.entryState && (
+                    memory.gameState.value !== GameStates.GAMEPLAY &&
+                    (this.checkTransition(memory.roomID, undefined, Rooms.EMPTY) ||
+                        (isGameplay(memory.gameState.prevReadValue) && !isGameplay(memory.gameState.value))) &&
+                    !isDemo(memory.gameState.value) &&
+                    !isDemo(memory.gameState.prevReadValue)
+                )
+            ) {
+                const eventData = {
+                    gameTags: Object.keys(globalState.persistent.gameTags || {}),
+                    roomID: memory.roomID.value,
+                    prevRoomID: this.state.prevRoomID,
+                    entryFrameDelta: this.state.entryFrameDelta,
+                    practice: !!globalState.persistent.gameTags.PRACTICE,
+                    practiceEntryDelta: this.state.practiceEntryDelta,
+                    rps: globalState.readsPerSecond,
+                    readTime: globalState.readTime,
+                    entryState: this.state.entryState,
+                    igtWasPaused: !!this.state.paused,
+                };
+                sendEvent("smRoomTimeReset", eventData);
+            }
             this.resetState();
         }
 
@@ -132,10 +167,12 @@ export default class RoomTimes extends MemoryModule {
             this.state.exitTime &&
             (this.checkChange(memory.roomID) ||
                 memory.gameState.value === GameStates.CERES_DESTROYED_CINEMATIC ||
-                memory.gameState.value === GameStates.BEAT_THE_GAME)
+                memory.gameState.value === GameStates.BEAT_THE_GAME ||
+                memory.doorTransitionFunction.value >= 0xe38e)
         ) {
             // We got next room ID, time to send event
             const eventData = {
+                gameTags: Object.keys(globalState.persistent.gameTags || {}),
                 frameCount: this.state.totalFrames,
                 totalSeconds: this.state.roomTime,
                 trueSeconds: this.state.trueRoomTime,
@@ -200,7 +237,8 @@ export default class RoomTimes extends MemoryModule {
                 this.state.igtFrames = currentIGT - this.state.entryIGT;
 
                 // Limit totalFrames so it's never less than IGT + Lag, accounting for read time offsets within frames
-                // for a majority of rooms.
+                //  for a majority of rooms. This guarantees time is never a negative delta on a room without IGT pauses
+                //  relative to practice rom timings.
                 const totalFrames = Math.max(
                     this.state.igtFrames + this.state.lagFrames,
                     memory.nmiCounter.value + 65536 * this.state.nmiRollover - this.state.entryNMI - exitFrameDelta
@@ -214,9 +252,6 @@ export default class RoomTimes extends MemoryModule {
                 console.log("delta s: ", roomTime / 1000 - totalFrames / FPS);
 
                 this.state.totalFrames = totalFrames;
-                if (!this.state.paused) {
-                    this.state.totalFrames = Math.max(igtFrames + lagFrames, totalFrames);
-                }
                 this.state.exitTime = exitTime;
                 this.state.roomID = memory.roomID.value;
                 this.state.roomTime = totalFrames / FPS;
@@ -255,6 +290,7 @@ export default class RoomTimes extends MemoryModule {
                     this.state.mb3NMI - this.state.mb2NMI - (this.state.mb3FrameCount - this.state.mb2FrameCount);
 
                 const eventData = {
+                    gameTags: Object.keys(globalState.persistent.gameTags || {}),
                     phase: 3,
                     frameCount: totalFrames,
                     totalSeconds: totalFrames / FPS,
@@ -284,6 +320,7 @@ export default class RoomTimes extends MemoryModule {
                     this.state.mb2NMI - this.state.mb1NMI - (this.state.mb2FrameCount - this.state.mb1FrameCount);
 
                 const eventData = {
+                    gameTags: Object.keys(globalState.persistent.gameTags || {}),
                     phase: 2,
                     frameCount: totalFrames,
                     totalSeconds: totalFrames / FPS,
@@ -312,6 +349,7 @@ export default class RoomTimes extends MemoryModule {
                     this.state.mb1NMI - this.state.entryNMI - (this.state.mb1FrameCount - this.state.entryFrameCount);
 
                 const eventData = {
+                    gameTags: Object.keys(globalState.persistent.gameTags || {}),
                     phase: 1,
                     frameCount: totalFrames,
                     totalSeconds: totalFrames / FPS,
@@ -356,6 +394,11 @@ export default class RoomTimes extends MemoryModule {
                 speedBooster: !!(memory.collectedEquipment.value & EquipmentFlags.SPEED_BOOSTER),
                 grapple: !!(memory.collectedEquipment.value & EquipmentFlags.GRAPPLE),
                 xray: !!(memory.collectedEquipment.value & EquipmentFlags.XRAY),
+                waveBeam: !!(memory.collectedBeams.value & BeamFlags.WAVE),
+                iceBeam: !!(memory.collectedBeams.value & BeamFlags.ICE),
+                spazerBeam: !!(memory.collectedBeams.value & BeamFlags.SPAZER),
+                plasmaBeam: !!(memory.collectedBeams.value & BeamFlags.PLASMA),
+                chargeBeam: !!(memory.collectedBeams.value & BeamFlags.CHARGE),
             },
             equips: {
                 variaSuit: !!(memory.equippedEquipment.value & EquipmentFlags.VARIA_SUIT),
@@ -369,6 +412,11 @@ export default class RoomTimes extends MemoryModule {
                 speedBooster: !!(memory.equippedEquipment.value & EquipmentFlags.SPEED_BOOSTER),
                 grapple: !!(memory.equippedEquipment.value & EquipmentFlags.GRAPPLE),
                 xray: !!(memory.equippedEquipment.value & EquipmentFlags.XRAY),
+                waveBeam: !!(memory.equippedBeams.value & BeamFlags.WAVE),
+                iceBeam: !!(memory.equippedBeams.value & BeamFlags.ICE),
+                spazerBeam: !!(memory.equippedBeams.value & BeamFlags.SPAZER),
+                plasmaBeam: !!(memory.equippedBeams.value & BeamFlags.PLASMA),
+                chargeBeam: !!(memory.equippedBeams.value & BeamFlags.CHARGE),
             },
             bossesKilled: {
                 phantoon: readBigIntFlag(memory.bossStates.value, BossStates.PHANTOON),
@@ -380,8 +428,17 @@ export default class RoomTimes extends MemoryModule {
                 goldenTorizo: readBigIntFlag(memory.bossStates.value, BossStates.GOLDEN_TORIZO),
                 sporeSpawn: readBigIntFlag(memory.bossStates.value, BossStates.SPORE_SPAWN),
                 crocomire: readBigIntFlag(memory.bossStates.value, BossStates.CROCOMIRE),
+                motherBrain: readBigIntFlag(memory.bossStates.value, BossStates.MOTHER_BRAIN),
             },
             eventStates: memory.eventStates.value,
+            slowed: memory.samusXSpeedDivisor.value > 1,
+            elevator: memory.elevatorStatus.prevReadValue !== ElevatorStatus.INACTIVE,
+            blueSuit:
+                memory.speedBoostTimer.value >= 4 &&
+                memory.samusXExtraRunSpeed.value === 0 &&
+                memory.samusXExtraRunSubSpeed.value === 0,
+            spikeSuit:
+                memory.specialSamusPaletteTimer.value === 1 && memory.specialSamusPaletteTimer.prevReadValue === 1,
         };
     }
 }

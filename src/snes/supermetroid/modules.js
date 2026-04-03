@@ -13,6 +13,8 @@ import RoomTimes from "./modules/RoomTimes";
 import IGTReport from "./modules/IGTReport";
 import RidleyOverkillTracker from "./modules/RidleyOverkillTracker";
 import RidleyGameModule from "./modules/RidleyGame";
+import ZebesGameModule from "./modules/ZebesGame";
+import GeneralGameStateModule from './modules/GeneralGameState'
 
 export const SuperMetroid = [
     ResetEventModule,
@@ -21,6 +23,7 @@ export const SuperMetroid = [
     PhantoonGameModule,
     CeresGameModule,
     RidleyGameModule,
+    ZebesGameModule,
     IGTReport,
     MoondanceEmoteOnlyModule,
     MoatDiveModule,
@@ -30,4 +33,5 @@ export const SuperMetroid = [
     RidleyOverkillTracker,
     TacoTankTracker,
     NiceModule,
+    GeneralGameStateModule,
 ];
